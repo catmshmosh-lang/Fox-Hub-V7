@@ -1,158 +1,193 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:Service("RunService")
+local CoreGui = game:Service("CoreGui")
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart", 5)
-local humanoid = character:WaitForChild("Humanoid", 5)
-
-if not rootPart or not humanoid then 
-	return 
+if CoreGui:FindFirstChild("FOX_Fly_Gui") then
+    CoreGui.FOX_Fly_Gui:Destroy()
 end
 
-local isFlying = false
-local flySpeed = 70
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FOX_Fly_Gui"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
 
-local attachment = Instance.new("Attachment")
-attachment.Name = "FlyAttachment"
-attachment.Parent = rootPart
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 350, 0, 120)
+MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
-local linearVelocity = Instance.new("LinearVelocity")
-linearVelocity.Attachment0 = attachment
-linearVelocity.MaxForce = 0
-linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-linearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+local RED_AKA = Color3.fromRGB(200, 30, 30)
+local BLUE_AO = Color3.fromRGB(30, 80, 200)
+local PURPLE_MURASAKI = Color3.fromRGB(110, 40, 180)
+local DARK_BG = Color3.fromRGB(30, 30, 35)
 
-local alignOrientation = Instance.new("AlignOrientation")
-alignOrientation.Attachment0 = attachment
-alignOrientation.MaxTorque = 0
-alignOrientation.Responsiveness = 200
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "FOX_FlySystem"
-screenGui.ResetOnSpawn = false 
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
-local mainFrame = Instance.new("Frame", screenGui)
-mainFrame.Size = UDim2.new(0, 140, 0, 120)
-mainFrame.Position = UDim2.new(0.82, 0, 0.6, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(40, 20, 60)
-mainFrame.BackgroundTransparency = 0.2
-
-local frameCorner = Instance.new("UICorner", mainFrame)
-frameCorner.CornerRadius = UDim.new(0, 10)
-
-local titleLabel = Instance.new("TextLabel", mainFrame)
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Text = "FOX FLY"
-titleLabel.TextColor3 = Color3.fromRGB(200, 100, 255)
-titleLabel.TextSize = 16
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.BackgroundTransparency = 1
-
-local toggleButton = Instance.new("TextButton", mainFrame)
-toggleButton.Size = UDim2.new(0.9, 0, 0, 35)
-toggleButton.Position = UDim2.new(0.05, 0, 0.35, 0)
-toggleButton.BackgroundColor3 = Color3.fromRGB(120, 30, 160)
-toggleButton.Text = "إيقاف"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.TextSize = 18
-
-local btnCorner = Instance.new("UICorner", toggleButton)
-
-local speedUpButton = Instance.new("TextButton", mainFrame)
-speedUpButton.Size = UDim2.new(0.42, 0, 0, 30)
-speedUpButton.Position = UDim2.new(0.05, 0, 0.7, 0)
-speedUpButton.BackgroundColor3 = Color3.fromRGB(60, 30, 90)
-speedUpButton.Text = "+ السرعة"
-speedUpButton.TextColor3 = Color3.fromRGB(230, 180, 255)
-speedUpButton.TextSize = 12
-Instance.new("UICorner", speedUpButton)
-
-local speedDownButton = Instance.new("TextButton", mainFrame)
-speedDownButton.Size = UDim2.new(0.42, 0, 0, 30)
-speedDownButton.Position = UDim2.new(0.53, 0, 0.7, 0)
-speedDownButton.BackgroundColor3 = Color3.fromRGB(60, 30, 90)
-speedDownButton.Text = "- السرعة"
-speedDownButton.TextColor3 = Color3.fromRGB(230, 180, 255)
-speedDownButton.TextSize = 12
-Instance.new("UICorner", speedDownButton)
-
-local dragging, dragInput, dragStart, startPos
-local function update(input)
-	local delta = input.Position - dragStart
-	mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local function createButton(name, text, pos, size, bgCol, parent)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Text = text
+    btn.Size = size
+    btn.Position = pos
+    btn.BackgroundColor3 = bgCol
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 18
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(0,0,0)
+    btn.Parent = parent
+    return btn
 end
 
-mainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = mainFrame.Position
-		
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Text = "  FOX Fly"
+TitleLabel.Size = UDim2.new(0, 230, 0, 40)
+TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+TitleLabel.BackgroundColor3 = PURPLE_MURASAKI
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 20
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainFrame
+
+local MinBtn = createButton("MinBtn", "-", UDim2.new(0, 230, 0, 0), UDim2.new(0, 60, 0, 40), BLUE_AO, MainFrame)
+local CloseBtn = createButton("CloseBtn", "X", UDim2.new(0, 290, 0, 0), UDim2.new(0, 60, 0, 40), RED_AKA, MainFrame)
+
+local UpBtn = createButton("UpBtn", "لأعلى", UDim2.new(0, 0, 0, 40), UDim2.new(0, 80, 0, 40), BLUE_AO, MainFrame)
+local SpeedUpBtn = createButton("SpeedUpBtn", "+", UDim2.new(0, 80, 0, 40), UDim2.new(0, 60, 0, 40), PURPLE_MURASAKI, MainFrame)
+local FlyBtn = createButton("FlyBtn", "طيران", UDim2.new(0, 140, 0, 40), UDim2.new(0, 210, 0, 40), RED_AKA, MainFrame)
+
+local DownBtn = createButton("DownBtn", "لأسفل", UDim2.new(0, 0, 0, 80), UDim2.new(0, 80, 0, 40), BLUE_AO, MainFrame)
+local SpeedDownBtn = createButton("SpeedDownBtn", "-", UDim2.new(0, 80, 0, 80), UDim2.new(0, 60, 0, 40), PURPLE_MURASAKI, MainFrame)
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Text = "50"
+SpeedLabel.Size = UDim2.new(0, 210, 0, 40)
+SpeedLabel.Position = UDim2.new(0, 140, 0, 80)
+SpeedLabel.BackgroundColor3 = DARK_BG
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Font = Enum.Font.SourceSansBold
+SpeedLabel.TextSize = 18
+SpeedLabel.Parent = MainFrame
+
+local flying = false
+local speed = 50
+local maxSpeed = 300
+local minSpeed = 10
+local flyConnection
+local bodyVelocity, bodyGyro
+
+local function updateSpeedDisplay()
+    SpeedLabel.Text = tostring(speed)
+end
+
+local function startFly()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local root = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.P = 9e4
+    bodyGyro.maxTorque = Vector3.new(9e5, 9e5, 9e5)
+    bodyGyro.cframe = root.CFrame
+    bodyGyro.Parent = root
+    
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.maxForce = Vector3.new(9e5, 9e5, 9e5)
+    bodyVelocity.Parent = root
+    
+    humanoid.PlatformStand = true
+    local camera = workspace.CurrentCamera
+    
+    flyConnection = RunService.RenderStepped:Connect(function()
+        if not character or not root.Parent or not flying then return end
+        bodyGyro.cframe = camera.CFrame
+        local moveDirection = humanoid.MoveDirection
+        local velocity = moveDirection * speed
+        bodyVelocity.velocity = Vector3.new(velocity.X, bodyVelocity.velocity.Y, velocity.Z)
+    end)
+end
+
+local function stopFly()
+    flying = false
+    FlyBtn.Text = "طيران"
+    FlyBtn.BackgroundColor3 = RED_AKA
+    if flyConnection then flyConnection:Disconnect() end
+    if bodyVelocity then bodyVelocity:Destroy() end
+    if bodyGyro then bodyGyro:Destroy() end
+    
+    local character = LocalPlayer.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.PlatformStand = false end
+    end
+end
+
+FlyBtn.MouseButton1Click:Connect(function()
+    if flying then
+        stopFly()
+    else
+        flying = true
+        FlyBtn.Text = "إيقاف"
+        FlyBtn.BackgroundColor3 = BLUE_AO
+        startFly()
+    end
 end)
 
-mainFrame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
+SpeedUpBtn.MouseButton1Click:Connect(function()
+    if speed < maxSpeed then
+        speed = speed + 10
+        updateSpeedDisplay()
+    end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		update(input)
-	end
+SpeedDownBtn.MouseButton1Click:Connect(function()
+    if speed > minSpeed then
+        speed = speed - 10
+        updateSpeedDisplay()
+    end
 end)
 
-speedUpButton.MouseButton1Click:Connect(function()
-	flySpeed = math.min(flySpeed + 20, 200)
+local upping = false
+local downing = false
+
+UpBtn.MouseButton1Down:Connect(function() upping = true end)
+UpBtn.MouseButton1Up:Connect(function() upping = false end)
+DownBtn.MouseButton1Down:Connect(function() downing = true end)
+DownBtn.MouseButton1Up:Connect(function() downing = false end)
+
+RunService.Heartbeat:Connect(function()
+    if flying and bodyVelocity then
+        local currentVel = bodyVelocity.velocity
+        local verticalSpeed = 0
+        if upping then verticalSpeed = speed end
+        if downing then verticalSpeed = -speed end
+        
+        if not upping and not downing then
+            bodyVelocity.velocity = Vector3.new(currentVel.X, 0, currentVel.Z)
+        else
+            bodyVelocity.velocity = Vector3.new(currentVel.X, verticalSpeed, currentVel.Z)
+        end
+    end
 end)
 
-speedDownButton.MouseButton1Click:Connect(function()
-	flySpeed = math.max(flySpeed - 20, 20)
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    UpBtn.Visible = not minimized
+    DownBtn.Visible = not minimized
+    SpeedUpBtn.Visible = not minimized
+    SpeedDownBtn.Visible = not minimized
+    FlyBtn.Visible = not minimized
+    SpeedLabel.Visible = not minimized
+    MainFrame.Size = minimized and UDim2.new(0, 350, 0, 40) or UDim2.new(0, 350, 0, 120)
 end)
 
-toggleButton.MouseButton1Click:Connect(function()
-	isFlying = not isFlying
-	if isFlying then
-		toggleButton.Text = "تشغيل"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(180, 50, 255)
-		humanoid.PlatformStand = true
-		
-		linearVelocity.Parent = rootPart
-		linearVelocity.MaxForce = 9e9
-		
-		alignOrientation.Parent = rootPart
-		alignOrientation.MaxTorque = 9e9
-	else
-		toggleButton.Text = "إيقاف"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(120, 30, 160)
-		humanoid.PlatformStand = false
-		
-		linearVelocity.MaxForce = 0
-		linearVelocity.Parent = nil
-		
-		alignOrientation.MaxTorque = 0
-		alignOrientation.Parent = nil
-	end
-end)
-
-RunService.RenderStepped:Connect(function()
-	if isFlying and character and rootPart and workspace.CurrentCamera then
-		local camera = workspace.CurrentCamera
-		alignOrientation.CFrame = camera.CFrame
-		
-		if humanoid.MoveDirection.Magnitude > 0 then
-			linearVelocity.VectorVelocity = camera.CFrame:VectorToWorldSpace(camera.CFrame:VectorToObjectSpace(humanoid.MoveDirection)) * flySpeed
-		else
-			linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-		end
-	end
+CloseBtn.MouseButton1Click:Connect(function()
+    stopFly()
+    ScreenGui:Destroy()
 end)
