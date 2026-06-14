@@ -4,183 +4,232 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 
-local Speed = 150
-local FlySpeed = 120
-local JumpPower = 350
-
 local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.Name = "FOX_Hack"
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 480, 0, 720)
-Frame.Position = UDim2.new(0.5, -240, 0.5, -360)
+Frame.Size = UDim2.new(0, 470, 0, 720)
+Frame.Position = UDim2.new(0.5, -235, 0.5, -360)
 Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
 
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0, 12)
+FrameCorner.Parent = Frame
+
 local Title = Instance.new("TextLabel")
 Title.Text = "FOX ULTIMATE DELTA HACK"
-Title.Size = UDim2.new(1, -40, 0, 70)
-Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 65)
 Title.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextScaled = true
 Title.Parent = Frame
 
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Text = "−"
-MinimizeBtn.Size = UDim2.new(0, 35, 0, 35)
-MinimizeBtn.Position = UDim2.new(1, -40, 0, 5)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-MinimizeBtn.TextColor3 = Color3.new(1,1,1)
-MinimizeBtn.TextScaled = true
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.Parent = Frame
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = Title
 
-local minimized = false
-local originalSize = Frame.Size
-local originalPos = Frame.Position
+local MinBtn = Instance.new("TextButton")
+MinBtn.Text = "−"
+MinBtn.Size = UDim2.new(0, 35, 0, 35)
+MinBtn.Position = UDim2.new(1, -45, 0, 15)
+MinBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+MinBtn.TextColor3 = Color3.new(1,1,1)
+MinBtn.TextScaled = true
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = Frame
+MinBtn.ZIndex = 5
 
-MinimizeBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        Frame.Size = UDim2.new(0, 480, 0, 70)
-        MinimizeBtn.Text = "+"
-    else
-        Frame.Size = originalSize
-        Frame.Position = originalPos
-        MinimizeBtn.Text = "−"
+local MinBtnCorner = Instance.new("UICorner")
+MinBtnCorner.CornerRadius = UDim.new(0, 8)
+MinBtnCorner.Parent = MinBtn
+
+local dragging, dragInput, dragStart, startPos
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
-local function AntiBanFull()
-    hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if method == "Kick" or method == "kick" then return nil end
-        return self[method](self, ...)
-    end)
-    
-    LocalPlayer.Idled:Connect(function()
-        game:GetService("VirtualUser"):Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        wait(1)
-        game:GetService("VirtualUser"):Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    end)
-    
-    for _, v in pairs(getconnections(game:GetService("LogService").MessageOut)) do
-        v:Disable()
+Title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local minimized = false
+local origSize = Frame.Size
+
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        Frame.Size = UDim2.new(0, 470, 0, 65)
+        MinBtn.Text = "+"
+    else
+        Frame.Size = origSize
+        MinBtn.Text = "−"
+    end
+end)
+
+local function GetCharacterElements()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid", 5)
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    return char, hum, hrp
 end
 
-local function FullUnlock()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Tool") or v:IsA("Accessory") then
-            v.Parent = LocalPlayer.Backpack
+local function AntiBanFull()
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if method == "Kick" or method == "kick" then 
+            return nil 
         end
-    end
+        if self:IsA("RemoteEvent") and (string.find(string.lower(self.Name), "ban") or string.find(string.lower(self.Name), "cheat") or string.find(string.lower(self.Name), "kick")) then
+            return nil
+        end
+        return oldNamecall(self, ...)
+    end)
+
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if not checkcaller() then
+            if self:IsA("Humanoid") and key == "WalkSpeed" then return 16 end
+            if self:IsA("Humanoid") and key == "JumpPower" then return 50 end
+        end
+        return oldIndex(self, key)
+    end)
+    
+    if setfflag then pcall(function() setfflag("ReportCrash", "False") end) end
 end
 
 local function GodMode()
-    LocalPlayer.Character.Humanoid.Health = math.huge
-    LocalPlayer.Character.Humanoid.MaxHealth = math.huge
-    LocalPlayer.Character.Humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-        LocalPlayer.Character.Humanoid.Health = math.huge
-    end)
+    local _, hum, _ = GetCharacterElements()
+    if hum then
+        hum.Health = math.huge
+        hum.MaxHealth = math.huge
+        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+    end
 end
 
 local function SuperSpeed()
-    LocalPlayer.Character.Humanoid.WalkSpeed = Speed
+    local _, hum, _ = GetCharacterElements()
+    if hum then hum.WalkSpeed = 150 end
 end
 
 local function SuperJump()
-    LocalPlayer.Character.Humanoid.JumpPower = JumpPower
+    local _, hum, _ = GetCharacterElements()
+    if hum then hum.JumpPower = 350 end
 end
 
 local function Fly()
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bv.Parent = LocalPlayer.Character.HumanoidRootPart
-    UserInputService.InputBegan:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.E then
-            bv.Velocity = LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector * FlySpeed
-        end
-    end)
+    local char, hum, hrp = GetCharacterElements()
+    if hrp and not hrp:FindFirstChild("FoxFlyVelocity") then
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "FoxFlyVelocity"
+        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.Parent = hrp
+        
+        UserInputService.InputBegan:Connect(function(k, gpe)
+            if gpe then return end
+            if k.KeyCode == Enum.KeyCode.E then
+                local _, _, currentHrp = GetCharacterElements()
+                if currentHrp and currentHrp:FindFirstChild("FoxFlyVelocity") then
+                    currentHrp.FoxFlyVelocity.Velocity = currentHrp.CFrame.LookVector * 100
+                end
+            end
+        end)
+    end
 end
 
 local function Noclip()
     RunService.Stepped:Connect(function()
-        pcall(function()
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
+        if LocalPlayer.Character then
+            for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = false end
             end
-        end)
+        end
     end)
 end
 
-local function FullESP()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr \~= LocalPlayer and plr.Character then
-            local hl = Instance.new("Highlight")
-            hl.FillColor = Color3.new(1,0,0)
-            hl.OutlineColor = Color3.new(1,1,0)
-            hl.Parent = plr.Character
-        end
-    end
-end
-
 local function KillAll()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr \~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") then
-            plr.Character.Humanoid.Health = 0
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") then
+            p.Character.Humanoid.Health = 0
         end
     end
 end
 
 local function InfiniteJump()
     UserInputService.JumpRequest:Connect(function()
-        LocalPlayer.Character.Humanoid:ChangeState("Jumping")
+        local _, hum, _ = GetCharacterElements()
+        if hum then hum:ChangeState("Jumping") end
     end)
 end
 
 local function TeleportMouse()
     LocalPlayer:GetMouse().Button1Down:Connect(function()
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(LocalPlayer:GetMouse().Hit.Position + Vector3.new(0,5,0))
+        local _, _, hrp = GetCharacterElements()
+        if hrp and LocalPlayer:GetMouse().Hit then
+            hrp.CFrame = CFrame.new(LocalPlayer:GetMouse().Hit.Position + Vector3.new(0, 5, 0))
+        end
     end)
 end
 
-local function ServerHop()
-    game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+local function FullBright()
+    Lighting.FogEnd = 999999
+    Lighting.Brightness = 3
 end
 
-local features = {
-    {Text="Anti-Ban Full (All Types)", Func=AntiBanFull},
-    {Text="Full Unlock All Items", Func=FullUnlock},
-    {Text="God Mode ∞", Func=GodMode},
-    {Text="Super Speed 150", Func=SuperSpeed},
-    {Text="Super Jump 350", Func=SuperJump},
-    {Text="Fly (E Key)", Func=Fly},
-    {Text="Noclip", Func=Noclip},
-    {Text="Full ESP + Highlight", Func=FullESP},
-    {Text="Kill All", Func=KillAll},
-    {Text="Infinite Jump", Func=InfiniteJump},
-    {Text="Teleport To Mouse", Func=TeleportMouse},
-    {Text="Aimbot Headshot", Func=function() print("Aimbot Activated") end},
-    {Text="Remove Fog + Full Bright", Func=function() Lighting.FogEnd = 999999; Lighting.Brightness = 3 end},
-    {Text="Server Hop", Func=ServerHop},
+local buttons = {
+    {Text="مضاد الحظر الكامل والـ بانق", Func=AntiBanFull},
+    {Text="وضع الخلود مصلح ∞", Func=GodMode},
+    {Text="السرعة الخارقة 150", Func=SuperSpeed},
+    {Text="القفز الخارق 350", Func=SuperJump},
+    {Text="الطيران المستمر (اضغط E)", Func=Fly},
+    {Text="اختراق الجدران التلقائي", Func=Noclip},
+    {Text="قتل جميع اللاعبين بالسيرفر", Func=KillAll},
+    {Text="القفز اللانهائي في الهواء", Func=InfiniteJump},
+    {Text="انتقال فوري لموقع الماوس", Func=TeleportMouse},
+    {Text="الإضاءة الكاملة وإلغاء الضباب", Func=FullBright},
 }
 
-for i, btn in ipairs(features) do
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0.9, 0, 0, 50)
-    Button.Position = UDim2.new(0.05, 0, 0.08 * i + 0.12, 0)
-    Button.Text = btn.Text
-    Button.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-    Button.TextColor3 = Color3.new(1,1,1)
-    Button.TextScaled = true
-    Button.Font = Enum.Font.GothamSemibold
-    Button.Parent = Frame
-    Button.MouseButton1Click:Connect(btn.Func)
+local y = 80
+for _, b in ipairs(buttons) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 48)
+    btn.Position = UDim2.new(0.05, 0, 0, y)
+    btn.Text = b.Text
+    btn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamSemibold
+    btn.Parent = Frame
+    btn.MouseButton1Click:Connect(b.Func)
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    y = y + 55
 end
 
 AntiBanFull()
